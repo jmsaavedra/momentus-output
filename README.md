@@ -1,6 +1,5 @@
-Momentus IO 
-================
-##Output Development App
+#momentus.io
+###Output Development App
 #####version 0.0.1
 
 ##Setup Instructions:
@@ -32,11 +31,12 @@ Momentus IO
   # run with npm (uses nodemon)
   $ npm run start
 
-  # or just run it yourself
-  $ nodemon output.js
+  # or just run it reg-sauce
+  $ node output.js
   ```
 ___
 ##Requirements
+
 _App_
 * node v0.10.35
 
