@@ -34,6 +34,27 @@
   # or just run it reg-sauce
   $ node output.js
   ```
+
+___
+##How does it work
+
+* check out the `test_moment.json` file in /moments folder
+  * this is an example of exactly what the momentus app feeds to every output module when it's time for processing
+  * more explanation about this object in the [momentus.io wiki](https://github.com/jmsaavedra/momentus.io/wiki/Output-Module-API)
+* immediately on running the app, whichever output module you're testing (`var myTestModule` in output.js) will process this moment object
+* output modules are found in the `/modules/output` folder. currently only `basic_v3` works with this app
+* after your module has processed successfully, you will see a `/temp` folder created inside of `/moments`
+* this temp folder contains another folder named with object._id of the moment you just processed (from the .json file)
+* inside of this you will see `/basic_v3` (module name) and `/source_downloads`
+  * `/basic_v3` contains all files that were processed specifically for this module, including the final output file (.gif for now)
+    * includes any processed frames, or resized images (basic_v3 resizes profile pictures, and 1 processed frame per Story)
+  * `/source_downloads` contains any file downloaded for this Moment
+    * includes raw profile images and raw story images downloaded.
+  * reason for this folder separation: so that multiple output modules don't re-download the same source images over and over
+  * in the live-server context, both of these folders will get deleted (after output file is uploaded to S3)
+* after successful processing, you'll see an Output Object get printed. this what you will return to the momentus web app server, and it will do all the final housekeeping (upload your local file to S3, update database, delete temp folder contents, etc)
+
+
 ___
 ##Requirements
 
