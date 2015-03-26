@@ -1,6 +1,7 @@
-Momentus IO Output Development App
+Momentus IO 
 ================
-#####Version 0.0.1
+##Output Development App
+#####version 0.0.1
 
 ##Setup Instructions:
 1. Install dependencies, clone repo:
