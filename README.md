@@ -1,5 +1,5 @@
 #momentus.io
-###Output Development App
+###Output Module Development App
 #####version 0.0.1
 
 ##Setup Instructions:
@@ -53,4 +53,5 @@ ___
 
 
 * [Install FFMpeg on Linux](https://gist.github.com/jmsaavedra/62bbcd20d40bcddf27ac)
-* [node-canvas](https://github.com/Automattic/node-canvas)
+* [graphicsmagick npm](https://github.com/aheckmann/gm)
+* [node-canvas npm](https://github.com/Automattic/node-canvas)
