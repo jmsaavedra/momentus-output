@@ -1,0 +1,133 @@
+{
+    "moment": {
+        "_id": "5501f13efbbbef865912fe8d",
+        "url": "acPI",
+        "expires": "2015-03-13T20:04:14.410Z",
+        "creator": "54fadae8abc1192b9429c823",
+        "duration_min": 1440,
+        "invite": "let's take a picture",
+        "title": "the longest 24hr moment",
+        "invitees": [
+            "54fadae8abc1192b9429c823",
+            "54fce9f71276644b13a0d5c5"
+        ],
+        "stories": [
+            {
+                "_id": "5501f54df22e8c7e63adb3f6",
+                "comment": "Here's my comment!!!",
+                "phone": "54fce9f71276644b13a0d5c6",
+                "user": {
+                    "_id": "54fce9f71276644b13a0d5c5",
+                    "local": {
+                        "phone": "54fce9f71276644b13a0d5c6",
+                        "name": "android phone",
+                        "friends": [
+                            "54fadae8abc1192b9429c823"
+                        ],
+                        "join_date": "2015-03-09T00:31:51.117Z"
+                    }
+                },
+                "moment": "5501f13efbbbef865912fe8d",
+                "file": {
+                    "path": "http://media-cdn.tripadvisor.com/media/photo-s/01/10/a4/10/a-beautiful-morning-at.jpg",
+                    "mimetype": "image/jpeg"
+                },
+                "loc": {
+                    "lat": 40.69349727165741,
+                    "lon": -73.98005640803274
+                },
+                "created": "2015-03-12T20:21:33.209Z"
+            },
+            {
+                "_id": "5501f594f22e8c7e63adb3f7",
+                "comment": "Portrait cinematic comments ",
+                "phone": "54fadaedabc1192b9429c825",
+                "user": {
+                    "_id": "54fadae8abc1192b9429c823",
+                    "twitter": {
+                        "profileImg": "http://pbs.twimg.com/profile_images/1640625510/profile_normal.JPG",
+                        "displayName": "joe saavedra",
+                        "username": "jmsaavedra",
+                        "token": "15753430-1spjhjVthRjE05Gf9j5en1MfSJyNppSwlUYT7HmfR",
+                        "id": "15753430"
+                    },
+                    "local": {
+                        "name": "joe saavedra",
+                        "phone": "54fadaedabc1192b9429c825",
+                        "profileImg": "http://pbs.twimg.com/profile_images/3443397786/569262d5da86b77495ce9d43f8c05799_normal.jpeg",
+                        "friends": [
+                            "54fce9f71276644b13a0d5c5",
+                            "54fdadedbfeccd9b541dba42",
+                            "5500a0a8f9477d3d7c0d8b90"
+                        ],
+                        "join_date": "2015-03-07T11:03:04.961Z"
+                    }
+                },
+                "moment": "5501f13efbbbef865912fe8d",
+                "file": {
+                    "path": "http://www.thetimes.co.uk/tto/multimedia/archive/00418/119014356__418274b.jpg",
+                    "mimetype": "image/jpeg"
+                },
+                "loc": {
+                    "lat": 40.69367323902877,
+                    "lon": -73.98030675752872
+                },
+                "created": "2015-03-12T20:22:44.297Z"
+            },
+            {
+                "_id": "5501f5acf22e8c7e63adb3f8",
+                "comment": "Horizontal!",
+                "phone": "54fadaedabc1192b9429c825",
+                "user": {
+                    "_id": "54fadae8abc1192b9429c823",
+                    "twitter": {
+                        "profileImg": "http://pbs.twimg.com/profile_images/1640625510/profile_normal.JPG",
+                        "displayName": "joe saavedra",
+                        "username": "jmsaavedra",
+                        "token": "15753430-1spjhjVthRjE05Gf9j5en1MfSJyNppSwlUYT7HmfR",
+                        "id": "15753430"
+                    },
+                    "local": {
+                        "name": "joe saavedra",
+                        "profileImg": "http://pbs.twimg.com/profile_images/1640625510/profile_normal.JPG",
+                        "phone": "54fadaedabc1192b9429c825",
+                        "friends": [
+                            "54fce9f71276644b13a0d5c5",
+                            "54fdadedbfeccd9b541dba42",
+                            "5500a0a8f9477d3d7c0d8b90"
+                        ],
+                        "join_date": "2015-03-07T11:03:04.961Z"
+                    }
+                },
+                "moment": "5501f13efbbbef865912fe8d",
+                "file": {
+                    "path": "http://blog.heartland.org/wp-content/uploads/2014/09/foodb.jpg",
+                    "mimetype": "image/jpeg"
+                },
+                "loc": {
+                    "lat": 40.69367323902877,
+                    "lon": -73.98030675752872
+                },
+                "created": "2015-03-12T20:23:08.368Z"
+            }
+        ],
+        "output_files": [ ], 
+        "output_modules": [ 
+            "canvas_v1",
+            "basic_v1",
+            "canvas_v4"
+        ],
+        "active": true,     
+        "created": "2015-03-12T20:04:14.410Z",
+        "path": {
+            "s3": "http://s3-us-west-1.amazonaws.com/mmt-test-1/5501f13efbbbef865912fe8d",
+            "local": "../../moments/temp/5501f13efbbbef865912fe8d"
+        }
+    },
+    "module": "basic_v3",  
+    "files": [              
+        "5501f54df22e8c7e63adb3f6.jpg",
+        "5501f594f22e8c7e63adb3f7.jpg",
+        "5501f5acf22e8c7e63adb3f8.jpg"
+    ]
+}

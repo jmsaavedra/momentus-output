@@ -1,0 +1,55 @@
+{
+  "name": "Momentus.io",
+  "version": "0.0.1",
+  "description": "Momentus.io Web App",
+  "main": "app.js",
+  "dependencies": {
+    "async": "^0.9.0",
+    "canvas": "^1.1.6",
+    "colors": "^1.0.3",
+    "console-log-level": "^1.0.0",
+    "debug": "^2.1.2",
+    "express": "^4.0.0",
+    "gif-encoder": "^0.4.1",
+    "gifsicle": "^2.0.1",
+    "gm": "^1.17.0",
+    "imagemin": "^3.1.0",
+    "lodash": "^3.5.0",
+    "memwatch": "^0.2.2",
+    "method-override": "^1.0.2",
+    "node-geocoder": "^2.16.1",
+    "request": "^2.51.0",
+    "rimraf": "^2.2.8"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "nodemon output.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jmsaavedra/momentus.io-output"
+  },
+  "author": {
+    "name": "Joe Saavedra",
+    "email": "joe@momentus.io",
+    "url": "http://jos.ph"
+  },
+  "contributors": [
+    {
+      "name": "cp",
+      "email": "chris@piuggi.com",
+      "url": "https://github.com/piuggi"
+    },
+    {
+      "name": "apon",
+      "email": "reach.apon@gmail.com",
+      "url": "http://apon.io"
+    }
+  ],
+  "license": "   ",
+  "bugs": {
+    "url": "https://github.com/jmsaavedra/momentus.io-output/issues"
+  },
+  "homepage": "http://momentus.io"
+}
