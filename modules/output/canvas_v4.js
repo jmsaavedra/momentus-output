@@ -4,15 +4,11 @@ var Canvas    = require('canvas'),
     _         = require('lodash'),
     spawn     = require('child_process').spawn,
     debug     = function(msg){ log.info("/output/Output_canvas_v3:: ".magenta.bold+msg); },
-    // S3        = require('../storage/S3Utils'),
     path      = require('path'),
     GifEncoder = require('gif-encoder'),
-    // User      = require('./../../models/user'),
-    // Output    = require('./../../models/output'),
-    // Moment    = require('./../../models/moment'),
-    // Story     = require('./../../models/story'),
     Folders = require('./../utils/FolderUtils');
     gm        = require('gm'),
+    wrap    = require('word-wrap'),
     rimraf    = require('rimraf'),
     request = require("request"),
     fs        = require('fs');
@@ -41,22 +37,38 @@ var canvas_v4 = function(obj,cb){
   //debug("THIS OUTPUT PROCESS obj: ".inverse+JSON.stringify(obj, null, '\t')); //*** uncomment to see the entire thing ***//
   debug("[Starting Output Module: ".cyan+module_info.name+" version ".cyan+module_info.version+" ]".cyan);
   var now_unix = new Date().getTime();
-
   //*** file and path globals ***//
-  var thisOutputFileName = now_unix.toString()+'_canvas_v4_output.gif'; //unique string for this output file
+  var thisOutputFileName = now_unix.toString()+'_'+module_info.name+'_output.gif'; //unique string for this output file
+  // var localMomentPath = obj.moment.path.local;
   var localMomentPath = path.join(__dirname, obj.moment.path.local);
   debug("L : "+localMomentPath);
-  var localModuleProcessFolder = path.join(localMomentPath, obj.module.toString());
+  var localModuleProcessFolder = path.join(localMomentPath, module_info.name);
   var thisLocalOutputFilePath = path.join(localModuleProcessFolder, thisOutputFileName);
-  var momentusLogoFile = 'http://momentus.io/img/logo/madewith_nourl.png';
-  var setupComplete = false;
+  var localMomentSrcDloadFolder = path.join(localMomentPath, 'source_downloads');
+
+  //*** output module globals and setup ***//
+  var gif = new GifEncoder(500,500,{highWaterMark:999999999}); //default process memory limit is 64kb, way too small.
+  
+  var momentusLogoFile = APPDIR+'/public/img/src/madewith_nourl.png';
+
   //** check that all of our local process folders exist, or make them **//
-  async.mapSeries([ path.join(__dirname,'../../moments/temp'),
-                    localMomentPath,
-                    localModuleProcessFolder ],
+  async.mapSeries([ localMomentPath,
+                    localModuleProcessFolder,
+                    localMomentSrcDloadFolder ],
     Folders.checkDir,
     function(err, results){
       if(err) debug("error creating folders".red);
+      
+      /* gif initialization stuffs */
+      var file = fs.createWriteStream(thisLocalOutputFilePath);
+      gif.pipe(file);
+      gif.setQuality(20); // image quality. 10 is default.
+      gif.setRepeat(0); //-1, play once. 0, loop indefinitely. positive number, loop n times.
+      // gif.setFrameRate(10);
+      // gif.setDispose(1);
+      gif.writeHeader();
+
+      /* OK, START */
       beginDownloads();
   });
 
@@ -65,28 +77,21 @@ var canvas_v4 = function(obj,cb){
 
     //*** download all images first ***//
     async.mapSeries(obj.moment.stories,function(thisStory, _callback){ //iterate through stories in order
-
+      if(!thisStory.user) thisStory.user = {_id:'anon', local: {name:'anonymous', profileImg:'http://momentus.io/img/src/puppy_profile.png'}}; //we got an anonymous entry
+      var thisUser = thisStory.user;
+      var storyPicLocal = path.join(localMomentSrcDloadFolder, thisStory._id+'_storyImg.jpg');
+      var backupProfilePic = 'http://momentus.io/img/src/puppy_profile.png';
+      var userPicLocal = path.join(localMomentSrcDloadFolder, thisUser._id+'_profileImg');
+      var userPicLocalSized = path.join(localModuleProcessFolder, thisUser._id+'_profileImg_resized');
+      var userPic = thisUser.local.profileImg ? thisUser.local.profileImg : backupProfilePic;
+      var fileType = path.extname(userPic);
+      debug("userPic: ".yellow+userPic);
       var storyId = thisStory._id;
-      //var findFile = path.basename(thisStory.file.path);
-      var thisFile = thisStory.file.path; //_.contains(obj.files, findFile) ? findFile : callback("story.file not found in obj.files: "+findFile);
-      var MomentParticipants = obj.moment.participants;
-      var backupProfilePic = 'http://momentus.io/img/moment-placeholder/puppy_profile.png';
-      //debug("thisStory.user: "+JSON.stringify(thisStory.user));
-      var userPicfileType = '.png'; //twitter
-      var userPic = thisStory.user.twitter ? thisStory.user.twitter.profileImg : null;
-      if(!userPic){
-        userPicfileType = '.JPG'; //fb profile pics
-        userPic = thisStory.user.facebook ? thisStory.user.facebook.profileImg : backupProfilePic;
-      }
-      var userPicLocal = path.join(localModuleProcessFolder,thisStory._id+'_profileImg'+userPicfileType);
-      var userPicLocalSized = path.join(localModuleProcessFolder,thisStory.user._id+'_profileImg_resized'+userPicfileType);
-
-      var storyPicLocal = path.join(localModuleProcessFolder,thisStory._id+'_storyImg.jpg');
 
       //*** DOWNLOAD ALL NEEDED FILES AND STORE LOCAL FILE URIs TO THIS MOMENT ***//
       async.parallel([
-        async.apply(downloadImage, userPic, userPicLocal), //downloadImage(picUrl, picDestinationLocalPath)
-        async.apply(downloadImage, thisFile, storyPicLocal)
+        async.apply(downloadImage, userPic, userPicLocal+fileType), //downloadImage(picUrl, picDestinationLocalPath)
+        async.apply(downloadImage, thisStory.file.path, storyPicLocal)
 
       ], function(e, downloadedFiles){
         if(e) debug('error downloading Files: '.red+e);
@@ -99,89 +104,56 @@ var canvas_v4 = function(obj,cb){
     }, function(e, theseStories){
       if(e) return cb(e);
       debug("download of all story + user images complete".green);
-      debug("theseStories.length: ".cyan+theseStories.length);
-      // debug("theseStories: ".yellow+JSON.stringify(theseStories));
+      debug("theseStories.length: ".cyan+theseStories.length); //debug("theseStories: ".yellow+JSON.stringify(theseStories));
 
       //*** we have all files downloaded. go go go !
-      //ProcessMoment(rawImageBuffers);
+      ProcessMoment(theseStories);
     });
   }
 
-
-  //*** output module globals and setup ***//
-  // var gif = new GifEncoder(500,500,{highWaterMark:999999999}); //default process memory limit is 64kb, way too small.
-  // var file = fs.createWriteStream(thisLocalOutputFilePath);
-  // gif.pipe(file);
-  // gif.setQuality(20); // image quality. 10 is default.
-  // gif.setRepeat(0); //-1, play once. 0, loop indefinitely. positive number, loop n times.
-  // // gif.setFrameRate(10);
-  // // gif.setDispose(1);
-  // gif.writeHeader();
-
-
-
   var storyCt = 1;
 
-  function ProcessMoment(rawImageBuffs){
+  function ProcessMoment(stories){
 
     //***** go through every story *****//
     async.mapSeries(obj.moment.stories,function(thisStory, _callback){
-
-      //-- do any API stuff to this moment, get any data needed for processing ****//
+      //-- do any API stuff to this story, get any data needed for processing ****//
       getCityState(thisStory, function(_e, _updatedStory){
         if(_e) return _callback(_e); //get out, this output module won't work for you.
-
-        //--  PROCESS THIS INDIVIDUAL STORY DATA + IMAGE + ******//
-        processSingleOverlayImage(rawImageBuffs, _updatedStory, gif, function(e){
-          if(e) debug("error on processOverlayImage: ".red + e);
-          _callback(e);
+        //-- get this story file as a buffer
+        gm(_updatedStory.file.storyImgLocal).toBuffer('JPG', function(_er, buffer){
+          //--  PROCESS THIS INDIVIDUAL STORY DATA + IMAGE + ******//
+          processSingleOverlayImage(buffer, _updatedStory, gif, function(e){
+            if(e) debug("error on processOverlayImage: ".red + e);
+            _callback(e);
+          });
         });
       });
-
     },function(err){
 
       //*** DONE PROCESSING ALL FILES INDIVIDUALLY -- wrap it up ***//
-      if(err) return debug('outputModule 02 error creating Overlays: '.red+err);
+      if(err) return debug(module_info.name+' error creating Overlays: '.red+err);
       debug('  All individual files have been processed successfully  '.cyan.inverse);
 
-      // gif.finish(); //finish the gif file, it's now saved locally
-      gif.finish();
+      gif.finish(); //finish the gif file, it's now saved locally
 
-      var newOutput = {};//new Output(module_info);
-      newOutput.moment = obj.moment._id;
-      newOutput.file_url = S3OutputFilePath;
-      //fs.readFile(thisLocalOutputFilePath, function(__erro, _buf){
-      gm(thisLocalOutputFilePath) //using gm() just to encode to Buffer for upload
-      .toBuffer('GIF',function (err, _buf) { //toBuffer for immediate upload
-        if (err) return debug("toBufferErr: ".red, err);
-        // S3.uploadFile(S3OutputKey, _buf, module_info.output_type, function(err, FileInfo){
-          if(err) debug("err S3 uploadFile: ".read+err);
-          //**** delete all local (ec2) process files ****//
-          rimraf(path.dirname(thisLocalOutputFilePath), function(e){
-            newOutput.save(function(e, _newOutput){
-              if(e) return debug("error updating moment with output file in Moments: ".red + e);
-              //ThisMoment.addOutputFileById(obj.moment._id, newOutput._id, function(__e){
-              debug("_newOutput: ".cyan+JSON.stringify(_newOutput));
-                if(__e) return debug("error updating moment with output file in Moments: ".red + __e);
-                // debug("outputFile: ".green+FileInfo.path+" saved to moment: ".green+obj.moment._id);
-                debug("OUTPUT MODULE ".bold+obj.module+" - DONE. ".bold+"//output object id: ".green+newOutput._id+"\n// output file: ".green+S3OutputFilePath+"\n// saved to moment: ".green+obj.moment._id);
-                //**** FINAL CALLBACK, WE'RE DONE HERE ****//
-                cb(null, S3OutputFilePath);
-              //});
-            });
-          });
-        //});
-      });
+      var momentOutputObj        = module_info;
+      momentOutputObj.moment     = obj.moment._id;
+      momentOutputObj.file_local = thisLocalOutputFilePath; 
+
+      debug(' OUTPUT MODULE: '.green.inverse+' '+module_info.name.green.bold+' '+' COMPLETED RENDER '.green.inverse);
+      //**** FINAL CALLBACK, WE'RE DONE HERE ****//
+      cb(null, momentOutputObj);
     });
 
 
-    function processSingleOverlayImage(_rawImageBufs, _story, _gif, _cb){
+    function processSingleOverlayImage(_buf, _story, _gif, _cb){
 
       debug("hit processOverlayImage #"+(storyCt));
       debug("_story: ".cyan.inverse + JSON.stringify(_story, null, '\t'));
 
       // pull this story's image out of the array of buffers:
-      var thisImgBuf = _.result(_.find(_rawImageBufs,{storyId: _story._id}), 'buf');
+      var thisImgBuf = _buf;//_.result(_.find(_rawImageBufs,{storyId: _story._id}), 'buf');
 
       var _user = _story.user,
       Image     = Canvas.Image,
@@ -192,37 +164,15 @@ var canvas_v4 = function(obj,cb){
       img.src   = new Buffer(thisImgBuf, 'binary');
 
       var author    = _user.local.name ? _user.local.name + ' is' : 'anonymous is',
-          _comment  = _story.comment,
-          comment   = [],
+          comment   = _story.comment,
           location  = [_story.loc.street_name, _story.loc.city+', '+_story.loc.state];//location string array (of lines)
 
-      /* "clever" font sizing and line breaking based on comment length */
-      var commentSize = 34;
-      if (_story.comment.length < 15){
-        commentSize = 36;
-        comment.push(_story.comment);
-      }
-      else if (_story.comment.length <= 32){
-        comment.push(_story.comment);
-      }
-      else if (_story.comment.length > 32){
-        var indexToLineBreak;
-        for(var i=0; i<_story.comment.length;i++) {
-          if (_story.comment[i] === " "){
-            if ( i > 28){
-              indexToLineBreak = i;
-              break;
-            }
-          }
-        }
-        commentSize = 26;
-        if(indexToLineBreak > 22)
-          //comment = comment.slice(0, indexToLineBreak) + "\/n" + comment.slice(indexToLineBreak+1, comment.length);
-          comment.push(_story.comment.slice(0, indexToLineBreak));
-          comment.push(_story.comment.slice(indexToLineBreak+1, _story.comment.length));
-      }
 
-      debug("comment: "+JSON.stringify(comment));
+      var commentSize = 32;
+      var commentWrapped = wrap(comment, {width:32, trim: true, indent: ''});
+      var commentLines = commentWrapped.split('\n');
+      // if(commentLines.length>1) commentSize = 26;
+      debug("commentWrapped: "+JSON.stringify(commentWrapped));
 
       var smallestSide = img.height >= img.width ? img.width : img.height; //got smaller size
       var sizeScaler = 500/smallestSide; //because most images are not 500, find a scaler to multiply against
@@ -230,11 +180,10 @@ var canvas_v4 = function(obj,cb){
 
       var imgDH = 500/sizeScaler;
       var imgDW = 500/sizeScaler;
+      var currFade = 1.0;
 
       var starty = ((img.height/2) - imgDH/2);
       var startx = ((img.width/2) - imgDW/2);
-
-
 
       function draw1(cb){
         var numFramesTotal = 10;
@@ -293,7 +242,7 @@ var canvas_v4 = function(obj,cb){
             //draw gray square behind comment
             ctx.fillStyle = "rgba(0,0,0,0.75)";
             //ctx.fillRect(0,canvas.height-metric.width-65,comment.length*75,600); //(canvas.height-(canvas.height-metric.width))
-            ctx.fillRect(0,0,30+comment.length*50,500); //(canvas.height-(canvas.height-metric.width))
+            ctx.fillRect(0,0,30+commentLines.length*50,500); //(canvas.height-(canvas.height-metric.width))
             //comment font/text settings
             ctx.textAlign = "left";
             ctx.fillStyle = '#CAE1FF';
@@ -307,8 +256,8 @@ var canvas_v4 = function(obj,cb){
             ctx.translate(-cx,-cy);
 
             //draw comment
-            for(var j=0; j<comment.length; j++){
-              ctx.fillText(comment[j], cx, cy+45*j);
+            for(var j=0; j<commentLines.length; j++){
+              ctx.fillText(commentLines[j], cx, cy+45*j);
             }
 
             // ctx.strokeText(comment, cx, cy);
@@ -425,7 +374,7 @@ var canvas_v4 = function(obj,cb){
   }
 };
 
-module.exports = canvas_v3;
+module.exports = canvas_v4;
 
 /************************ END MODULE *****************************/
 

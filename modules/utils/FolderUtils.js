@@ -7,20 +7,14 @@
  *  MODULE EXPORTS are declared after all functions
  */
 
-var fs = require('fs');
-var request = require('request');
-// var debug = require('debug')('Momentus:Folders');
-var debug = function(msg){ log.info("/utils/Folders:: ".gray.bold+msg); };
+var fs 			= require('fs'),
+		debug 	= function(msg){ log.info("/storage/folders:: ".gray.bold+msg); },
+		rimraf  = require('rimraf'),
+		path 		= require('path');
 
-var path = require('path');
-var _ = require('lodash');
-
-
-var root,
-	incomingDir,
-	incomingTempDir,
-	publicDir,
-	outputDir;
+var root 		= APPDIR,
+	publicDir = APPDIR+'/public',
+	tempDir 	= APPDIR+'/public/temp';
 
 
 /***
@@ -29,15 +23,24 @@ var root,
 */
 var setup = function(dir) {
 
-	root = dir;
-	publicDir = dir + '/public';
-	incomingDir = publicDir + '/incoming'; //in the publc/ dir for now
-	incomingTempDir = incomingDir + '/temp';
-
-	checkDir(incomingDir, function(){
-		checkDir(incomingTempDir, function(){});
-	});
+	// root = dir;
+	// publicDir = dir + '/public';
+	// tempDir = publicDir + '/temp'; //in the publc/ dir for now
+	checkDir(tempDir, function(){});
 };
+
+
+/***
+// DELETE a Moment's TEMP folder
+// -- we just finished processing and saving everything necessary.
+*/
+var cleanTempFolders = function(moment_id){
+
+	rimraf(path.join(tempDir.toString(),moment_id.toString()), function(e){	
+		if(e) return log.error("error rimraf local moment folder: "+e);
+		debug("finished cleaning temp moment process folders".green);
+	});
+}
 
 
 
@@ -48,31 +51,25 @@ var setup = function(dir) {
 var checkDir = function(dir, callback) {
 
 	var thisDir = dir;
-
 	fs.exists(thisDir, function(exists) {
 		if (exists) {
 			debug("Dir Exists: ".yellow + thisDir);
 			callback();
 		} else {
-			debug(" Dir Does Not Exist: ".red.inverse + " " + thisDir);
-			fs.mkdirSync(thisDir);
-			debug("Created  Directory:  ".green + " " + thisDir);
-			callback();
+			debug(" Dir Does Not Exist: ".red +" "+ thisDir);
+			fs.mkdir(thisDir, function(e){
+				if(e) return log.error('error on mkdir: '+e);
+				debug("Created  Directory:  ".green +" "+ thisDir);
+				callback();
+			});
 		}
 	});
 };
 
-module.exports = {
 
+module.exports = {
 	setup: setup,
 	checkDir: checkDir,
-
-	root: function() {
-		return root;
-	},
-
-	incomingDir: function() {return incomingDir;},
-	incomingTempDir: function() {return incomingTempDir;},
-	tempDir: function() {return incomingTempDir;},
-
+	cleanTempFolders: cleanTempFolders,
+	tempDir: function() {return tempDir;}
 };

@@ -19,7 +19,7 @@ var http         = require('http'),
 
 
 //=== what are you testing =========================================================
-var myTestModule = './modules/output/basic_v3'; //your module you want to test
+var myTestModule = './modules/output/canvas_v4'; //your module you want to test
 
 // edit this JSON object to change out images, etc //
 var myTestMoment = JSON.parse(fs.readFileSync('./moments/test_moment.json', 'utf8')); //fake moment object
@@ -28,6 +28,7 @@ var myTestMoment = JSON.parse(fs.readFileSync('./moments/test_moment.json', 'utf
 //=== app globals + config =========================================================
 global.log = require('console-log-level')({ level: 'info' });
 global._ = _;
+global.APPDIR = __dirname;
 
 app.use(express.static(path.join(__dirname, 'public')));
 

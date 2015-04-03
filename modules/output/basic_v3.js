@@ -19,18 +19,16 @@ var module_info = {
 /*
 */
 var fs      = require('fs'),
-    rimraf  = require('rimraf'),
     gm      = require('gm'),
     async   = require('async'),
     path    = require('path'),
     Folders = require('./../utils/FolderUtils'),
-    FileUtils = require('./../utils/FileUtils'),
+    wrap    = require('word-wrap'),
     spawn   = require('child_process').spawn,
-    https   = require('https'),
-    request = require("request"),
-    qs      = require('querystring'),
     inspect = require('util').inspect,
-    debug   = function(msg){ log.info("/output/%s:: ".magenta.bold+msg, module_info.name); };
+    momentjs  = require('moment'),
+    FileUtils = require('./../utils/FileUtils'),
+    debug     = function(msg){ log.info("/output/%s:: ".magenta.bold+msg, module_info.name); };
     
 
 //***** YOUR OUTPUT MODULE ******//
@@ -41,27 +39,24 @@ var fs      = require('fs'),
 var basic_v3 = function(obj,  cb){
   debug("[Starting Output Module: ".cyan.bold+module_info.name.bold+" version ".cyan.bold+module_info.version+" ]".cyan.bold);
   // to see the raw input object:
-  // debug("\n---------------obj---------------\n".gray.inverse + JSON.stringify(obj) + "\n---------------------------------\n".gray.inverse);
-
-  //** local folder for this moment
+  //debug("\n---------------obj---------------\n".gray.inverse + JSON.stringify(obj) + "\n---------------------------------\n".gray.inverse);
+  //** local folder for this moment:
   // NOTE: after all output modules have finished processing this entire folder will get deleted by momentus app
   var localMomentFolder = path.join(__dirname, obj.moment.path.local.toString());
-  //** local folder for downloading source files for this moment (profile pictures, story images)
+  //** local folder for downloading source files for this moment (profile pictures, story images):
   // NOTE: this is so that other output modules don't re-download the same images over and over
   var localMomentSrcDloadFolder = path.join(localMomentFolder, 'source_downloads');
-  //** local folder where any temporary processed (individual frames, etc) files will live (on the EC2 instance)
+  //** local folder where any temporary processed (individual frames, etc) files will live (on the EC2 instance):
   // NOTE: this folder + contents will get deleted by momentus app (after uploading your final output file)
   var localModuleProcessFolder = path.join(localMomentFolder, module_info.name);
   debug("localModuleProcessFolder: ".yellow+localModuleProcessFolder);
 
-  
   //** check to make sure all local process folders exist for this moment + module **//
   async.mapSeries([ //array of paths
-      path.join(__dirname,'../../moments/temp'),
       localMomentFolder,
       localMomentSrcDloadFolder,
-      localModuleProcessFolder ],
-
+      localModuleProcessFolder 
+    ],
     Folders.checkDir, //execute this on all paths, in order.
     function(err, results){ //cb
       if(err) debug("error creating folders".red);
@@ -74,21 +69,20 @@ var basic_v3 = function(obj,  cb){
   function beginDownloads(){
     
     async.mapSeries(obj.moment.stories,function(thisStory, callback){
-
       //debug("about to download story: ".cyan + JSON.stringify(thisStory));
-      var storyPicLocal = path.join(localMomentSrcDloadFolder,thisStory._id+'_storyImg.jpg');
-      var MomentParticipants = obj.moment.participants; //in case that's helpful
+      if(!thisStory.user) thisStory.user = {_id:'anon', local: {name:'anonymous'}}; //we got an anonymous entry
       var thisUser = thisStory.user;
-      
-      var backupProfilePic = 'http://momentus.io/img/moment-placeholder/puppy_profile.png';
-      var userPicLocal = path.join(localMomentSrcDloadFolder,thisUser._id+'_profileImg');
-      var userPicLocalSized = path.join(localModuleProcessFolder,thisUser._id+'_profileImg_resized');
+      var storyPicLocal = path.join(localMomentSrcDloadFolder, thisStory._id+'_storyImg.jpg');
+      var backupProfilePic = 'http://momentus.io/img/src/puppy_profile.png';
+      var userPicLocal = path.join(localMomentSrcDloadFolder, thisUser._id+'_profileImg');
+      var userPicLocalSized = path.join(localModuleProcessFolder, thisUser._id+'_profileImg_resized');
       var userPic = thisUser.local.profileImg ? thisUser.local.profileImg : backupProfilePic;
+      
       var fileType = path.extname(userPic);
       
       debug("userPic: ".yellow+userPic);
 
-      //-- download both the userPic and storyFile
+      //-- download both the userPic and storyFile, return in order.
       async.parallel([
         async.apply(FileUtils.downloadImage, userPic, userPicLocal+fileType), //downloadImage(picUrl, picDestinationLocalPath)
         async.apply(FileUtils.downloadImage, thisStory.file.path, storyPicLocal)
@@ -107,16 +101,91 @@ var basic_v3 = function(obj,  cb){
           callback(e, thisStory)
         });
       });
-    }, function(e, theseStories){
+    }, function(e, theseStories){//*** we have all files downloaded.
       if(e) return cb(e);
       debug("download of all story + user images complete".green);
       debug("theseStories.length: ".cyan+theseStories.length);
       // debug("theseStories: ".yellow+JSON.stringify(theseStories));
-
-      //*** we have all files downloaded. go go go !
-      ProcessMoment(theseStories);
+      generateTitleJpg(function(__e){
+        if(__e) log.error("error generating Title: "+__e);
+        //*** ready to start processing stories + moment !
+        ProcessMoment(theseStories);  
+      });
     });
   }// end beginDownloads()
+
+
+  /***** GENERATE TITLE IMAGE
+  /* 
+  */
+function generateTitleJpg(titleCb){
+    var title = obj.moment.title;
+    var humanDur = obj.moment.duration_min == 1440 ? '24 hours' : 
+      obj.moment.duration_min == 60 ? '1 hour' :
+      momentjs.duration(obj.moment.duration_min, "minutes").humanize(false);
+    var humanTime = momentjs(obj.moment.expires).format("h:mma");     
+    var humanDate = momentjs(obj.moment.expires).format("dddd, MMM D YYYY");
+    var titleWrapped = wrap(obj.moment.title, {width:18, trim: true, indent: ''});
+    var titleLines = titleWrapped.split('\n');
+    console.log(titleLines);
+
+    gm(500, 500, "#000000")
+    .fill('white')
+    .drawRectangle(0,100,500,200)
+    .fill('black')
+    .font('AvantGarde-Demi', 60)
+    .drawText(0, -100, humanDur, 'Center')
+    .fill('white')
+    .font('Courier', 30)
+    .drawText(0, 50, "ending at "+humanTime, 'Center')
+    .drawText(0, 100, humanDate, 'Center')
+    .write(localModuleProcessFolder+'/process_title_2.jpg', function(_err){ if(_err) return titleCb(_err);
+      // gm(500,500, "#000000")
+      fs.readFile(APPDIR + '/public/img/src/output_title_bg.jpg', function(e, buf){ if(e) return titleCb(e)
+        gm(buf)
+        .fill('white')
+        .font('AvantGarde-Demi', 40)
+        .drawText(0, -50, '"'+titleWrapped+'"', 'Center')
+        .write(localModuleProcessFolder+'/process_title_1.jpg', function(__e){ if(__e) return titleCb(__e);
+        
+          // gm(buf).write(localTempFolder+'/process_title_1.jpg', function(_er){ if(_er) return titleCb(_er);
+            titleCb(null);
+          // });
+        });
+      })
+    });
+  }
+
+    // fs.readFile(APPDIR + '/public/img/output_title_bg.jpg', function(e, buf){
+    //   if(e) return cb(e);
+    //   gm(buf)
+    //   .fill('white')
+    //   .font('AvantGarde-Book', 20)
+    //   .drawText(25, -215 , humanDur + ", ending at "+humanTime, 'West')
+    //   .drawText(25, -175 , "on "+humanDate, 'West')
+    //   .font('AvantGarde-Demi', 45)
+    //   .drawText(0, -25, titleWrapped[0], 'Center')
+    //   .write(localModuleProcessFolder + '/title_1.jpg', function(_e){
+    //     if (_e) debug("first err: "+_e);//return cb(_e);
+    //     gm(this.outname)
+    //     .negative()
+    //     .write(localModuleProcessFolder + '/title_2.jpg', function(__e){
+    //       if (__e) debug("first err: "+__e);// return cb(__e);
+    //       gm()
+    //       .command('convert')
+    //       .in('-delay','50')
+    //       .in(localModuleProcessFolder + '/title_1.jpg')
+    //       .in('-delay','150')
+    //       .in(localModuleProcessFolder + '/title_2.jpg')
+    //       .write(localModuleProcessFolder + '/process_000000_title_img.gif', function (err) {
+    //         if (err) return cb(err);
+    //         console.log(this.outname + ' created :: ' + arguments[3]);
+    //         cb(null);
+    //       })
+    //     })
+    //   })
+    // });
+  // }
 
 
   /*** OK LET'S ACTUALLY MAKE SOMETHING NOW ***/
@@ -141,7 +210,7 @@ var basic_v3 = function(obj,  cb){
           var momentOutputObj = module_info;
           momentOutputObj.moment = obj.moment._id;
           momentOutputObj.file_local = gifPath; 
-          debug('   OUTPUT MODULE: '.green.inverse+' '+module_info.name.green.bold+' '+' COMPLETED   '.green.inverse);
+          debug(' OUTPUT MODULE: '.green.inverse+' '+module_info.name.green.bold+' '+' COMPLETED RENDER '.green.inverse);
           cb(null, momentOutputObj); // DONE. OUTPUT MODULE SUCCESS. 
         }
       });
@@ -172,24 +241,29 @@ var basic_v3 = function(obj,  cb){
     var thisFileOutPath = path.join(localModuleProcessFolder,'process_frame_'+frameNumber+'_'+path.basename(rawFilePath));
 
     //* "clever" font sizing and line breaking based on comment length *//
-    var commentSize = 34; //anything between 15 and 28 chars will be font size
+    var commentSize = 32; //anything between 15 and 28 chars will be font size
     if (comment.length < 15) commentSize = 36;
+    var commentWrapped = wrap(comment, {width:30, trim: true, indent: ''});
+    var commentLines = commentWrapped.split('\n');
 
-    if (comment.length > 28){
-      var indexToLineBreak;
-      for(var i=0; i<comment.length;i++) {
-        if (comment[i] === " "){
-          if ( i > 22){
-            indexToLineBreak = i;
-            break;
-          }
-        }
-      }
-      commentSize = 26;
-      if(indexToLineBreak > 22)
-        comment = comment.slice(0, indexToLineBreak) + "\n" + comment.slice(indexToLineBreak+1, comment.length);
-      //debug("finished comment: "+comment);
-    }
+    if(commentLines.length>1) commentSize = 26;
+
+    //another story for you bitches
+    // if (comment.length > 28){
+    //   var indexToLineBreak;
+    //   for(var i=0; i<comment.length;i++) {
+    //     if (comment[i] === " "){
+    //       if ( i > 22){
+    //         indexToLineBreak = i;
+    //         break;
+    //       }
+    //     }
+    //   }
+    //   commentSize = 26;
+    //   if(indexToLineBreak > 22)
+    //     comment = comment.slice(0, indexToLineBreak) + "\n" + comment.slice(indexToLineBreak+1, comment.length);
+    //   //debug("finished comment: "+comment);
+    // }
 
     //*** start up the graphicsmagick module ***//
     gm(rawFilePath)
@@ -210,7 +284,7 @@ var basic_v3 = function(obj,  cb){
     .drawText(authorTextX, 143 , storyAuthor, 'West')
 
     .font('AvantGarde-Demi', commentSize)
-    .drawText(25, 200, comment, 'West')
+    .drawText(25, 200, commentWrapped, 'West')
     .autoOrient()
 
     //***** turn this into a jpg buffer *****//
@@ -241,19 +315,18 @@ var basic_v3 = function(obj,  cb){
     /* this call grabs all .jpgs who's name starts with 'process_'
     /* concatenates with a delay of 150*100 ms
     /* convert ref: http://www.graphicsmagick.org/convert.html 
-    */
-    var gmArgs = ['convert', '-delay', '150', localModuleProcessFolder+'/process_*.jpg', tempModuleOutputFilePath];
-    // var cmd = 'gm convert -delay 150 '+localModuleProcessFolder+'/*.jpg  '+tempModuleOutputFilePath;
-    debug("spinning off magickChild now, with args: ".cyan + JSON.stringify(gmArgs, null, '\t'));
+    */var gmArgs = ['convert', //gm command
+    '-delay', '250', localModuleProcessFolder+'/process_title_1.jpg', 
+    '-delay', '200', localModuleProcessFolder+'/process_title_2.jpg',
+    '-delay', '200', localModuleProcessFolder+'/process_frame*.jpg',
+    tempModuleOutputFilePath];
+    //var cmd = 'gm convert -delay 150 '+localModuleProcessFolder+'/*.jpg  '+tempModuleOutputFilePath;
+    //debug("spinning off magickChild now, with args: ".cyan + JSON.stringify(gmArgs, null, '\t'));
     // process child that will execute the gm command
     var magickChild  = spawn('gm', gmArgs);
-
-    magickChild.stdout.on('data', function (data) {
-      //debug('stdout: '.cyan + data);
-    });
+    // magickChild.stdout.on('data', function (data) { debug('stdout: '.cyan + data); });
 
     magickChild.stderr.on('data', function (data) {
-      //log.error('child process error: '.red + data);
       cb("gm convert stderr error: ".red.bold+data, null);
     });
 

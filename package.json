@@ -14,12 +14,15 @@
     "gifsicle": "^2.0.1",
     "gm": "^1.17.0",
     "imagemin": "^3.1.0",
+    "linebreak": "^0.3.0",
     "lodash": "^3.5.0",
     "memwatch": "^0.2.2",
     "method-override": "^1.0.2",
+    "moment": "^2.9.0",
     "node-geocoder": "^2.16.1",
     "request": "^2.51.0",
-    "rimraf": "^2.2.8"
+    "rimraf": "^2.2.8",
+    "word-wrap": "^1.0.2"
   },
   "devDependencies": {},
   "scripts": {
